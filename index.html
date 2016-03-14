@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>xg + ammo.js</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #fff;
+				background-color: #000;
+				text-size-adjust: none;
+				margin: 0px;
+				overflow: hidden;
+				font-family: Monospace;
+				font-size: 13px;
+			}
+
+			#info {
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				padding: 5px 0px;
+				text-align: center;
+				z-index: 100;
+			}
+
+			a {
+				color: #0080ff;
+				text-decoration: none;
+			}
+
+			a:hover {
+				color: #f00;
+			}
+
+			.number { color: #fa0 }
+
+			#loading { font-weight: bold; background: #fa0; color: #fff; padding: 0.25em 1em; position: absolute; top: 0px; right: 0px; z-index: 200 }
+
+			input[type="range"] {
+				-webkit-appearance:none !important;
+			}
+
+			input[type="range"]::-webkit-slider-thumb {
+				-webkit-appearance:none !important;
+
+				height: 20px;
+				width: 20px;
+				background: #500;
+
+				cursor: pointer;
+			}
+
+			input[type="range"]::-webkit-slider-thumb:hover {
+				background: #f00;
+			}
+
+			#gravitySlider {
+				width: 400px;
+				background: rgba( 125, 75, 0, 0.5 );
+				padding: 0em;
+				vertical-align: middle;
+			}
+
+			#gravityWrapper {
+				margin-top: 1em;
+			}
+
+			#gravityValue {
+				width: 2.5em;
+				margin-right: 0.5em;
+				display: inline-block;
+			}
+
+			#resetButton {
+				background: #500;
+				color: #fff;
+				border: 0;
+				padding: 0.25em 0.5em;
+			}
+
+			#resetButton:hover {
+				background: #f00;
+				cursor: pointer;
+			}
+
+			#stats { position: absolute; top:10px; left: 10px }
+			#stats #fps { background: transparent !important }
+			#stats #fps #fpsText { color: #aaa !important }
+			#stats #fps #fpsGraph { display: none }
+		</style>
+	</head>
+
+	<body>
+		<div id="loading">Loading ...</div>
+
+		<div id="info">
+			<a href="http://alteredqualia.com/" target="_blank">xg</a> -
+			physically-based rendering + physics simulation
+			(based on <a href="https://github.com/kripken/ammo.js">ammo.js</a> <a href="http://kripken.github.io/ammo.js/examples/new/ammo.html">benchmark</a>) <br/>
+			<span class="number" id="nCubes">0</span> cubes, physics FPS: <span class="number" id="nFPS">0/0</span> (current / stable)<br/>
+
+			<div id="gravityWrapper">
+				Gravity <span id="gravityValue" class="number">-5</span> <input id="gravitySlider" min="-10" max="10" step="0.1" type="range" value="-5"/>
+				<button id="resetButton">Reset</button>
+			</div>
+		</div>
+
+		<div id="container"></div>
+
+		<script src="js/xg.min.rgba.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var useTransferables = Detector.supportsTransferables();
+
+			var SCALE = 0.8;
+			var MARGIN = 0;
+
+			var SCREEN_WIDTH = window.innerWidth;
+			var SCREEN_HEIGHT = window.innerHeight - 2 * MARGIN;
+
+			var FLOOR_SIZE = 100;
+			var FLOOR_HEIGHT = -6;
+
+			var renderer, scene, camera, light;
+
+			var physicsWorker;
+			var simulation;
+
+			var boxes = [];
+			var boxMaterials = [];
+
+			var boxGeo;
+			var sphereGeo;
+
+			var gravitySliderElement = document.getElementById( 'gravitySlider' );
+			var gravityValueElement = document.getElementById( 'gravityValue' );
+			var resetButtonElement = document.getElementById( 'resetButton' );
+
+			var loadingElement = document.getElementById( 'loading' );
+			var loaded = false;
+			var loadCounter = 0;
+
+			var fpsElement = document.getElementById( 'nFPS' );
+			var lastFPS = 0;
+
+			var cameraHeight = -2.75;
+
+			var target = new XG.Vector3( 0, cameraHeight, 0 );
+
+			init();
+			animate();
+
+			function showPhysicsFPS() {
+
+				var now = Date.now();
+
+				if ( now - lastFPS > 333 ) {
+
+					fpsElement.innerHTML = simulation.currentFPS + ' / ' + simulation.allFPS;
+					lastFPS = now;
+
+				}
+
+			}
+
+			function init() {
+
+				var container = document.getElementById( "container" );
+
+				// SCENE
+
+				scene = new XG.Scene();
+
+				camera = new XG.PerspectiveCamera( 30, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 1000 );
+				camera.position.set( 0, cameraHeight, 35 );
+				camera.lookAt( target );
+
+				scene.add( camera );
+
+				// LIGHTS
+
+				var intensity = 2;
+
+				light = new XG.SpotLight( 0x00aaff, intensity, 60, Math.PI/2 );
+				light.position.y = 25;
+				light.position.z = 20;
+				light.position.x = 20;
+
+				light.castShadow = true;
+				light.shadowCameraNear = 0.1;
+				light.shadowCameraFar = 150;
+				light.shadowCameraFov = 90;
+				light.shadowDarkness = 0.9;
+
+				scene.add( light );
+
+				light = new XG.SpotLight( 0xffaa00, intensity, 60, Math.PI/2 );
+				light.position.y = 25;
+				light.position.z = 20;
+				light.position.x = -20;
+
+				light.castShadow = true;
+				light.shadowCameraNear = 0.1;
+				light.shadowCameraFar = 150;
+				light.shadowCameraFov = 90;
+				light.shadowDarkness = 0.9;
+
+				scene.add( light );
+
+				light = new XG.SpotLight( 0xffffff, intensity, 60, Math.PI/2 );
+				light.position.y = 15;
+				light.position.z = 20;
+				light.position.x = 0;
+
+				light.castShadow = true;
+				light.shadowCameraNear = 0.1;
+				light.shadowCameraFar = 150;
+				light.shadowCameraFov = 90;
+				light.shadowDarkness = 0.9;
+
+				scene.add( light );
+
+				if ( 0 ) {
+
+					hemiLight = new XG.HemisphereLight( 0x1155aa, 0xaa9977 );
+					hemiLight.intensity = 0.25;
+					scene.add( hemiLight );
+
+				}
+
+				// OBJECTS
+
+				var mapA = XG.ImageUtils.loadCompressedTexture( "textures/materials/lament1.dds", checkStatus );
+				var mapB = XG.ImageUtils.loadCompressedTexture( "textures/materials/lament2.dds", checkStatus );
+				var mapC = XG.ImageUtils.loadCompressedTexture( "textures/materials/lament3.dds", checkStatus );
+
+				var mapD = XG.ImageUtils.loadCompressedTexture( "textures/materials/lament1.dds", checkStatus );
+
+				mapA.anisotropy = 4;
+				mapB.anisotropy = 4;
+				mapC.anisotropy = 4;
+				mapD.anisotropy = 4;
+
+				mapD.wrapS = mapD.wrapT = XG.RepeatWrapping;
+				mapD.repeat.set( 2, 1 );
+
+				var material1a = new XG.PhongMaterial( { color: 0xaaaaaa, specular: 0x171717, shininess: 200, map: mapA, bumpMap: mapA, bumpScale: 0.05 } );
+				var material1b = new XG.PhongMaterial( { color: 0xaaaaaa, specular: 0x171717, shininess: 200, map: mapB, bumpMap: mapB, bumpScale: 0.05 } );
+				var material1c = new XG.PhongMaterial( { color: 0xaaaaaa, specular: 0x171717, shininess: 200, map: mapC, bumpMap: mapC, bumpScale: 0.05 } );
+
+				material2a = new XG.PhongMaterial( { color: 0x171717, specular: 0x171717, shininess: 50, bumpMap: mapD, bumpScale: 0.025 } );
+
+				boxMaterials[ 0 ] = material1a;
+				boxMaterials[ 1 ] = material1b;
+				boxMaterials[ 2 ] = material1c;
+
+				boxGeo = new XG.BoxGeometry( 2, 2, 2 );
+				sphereGeo = new XG.SphereGeometry( 1, 32, 16 );
+
+				//
+
+				var map = XG.ImageUtils.loadCompressedTexture( "textures/materials/wood2.dds", checkStatus );
+				map.wrapS = map.wrapT = XG.RepeatWrapping;
+				map.repeat.multiplyScalar( 4 );
+				map.anisotropy = 4;
+
+				var floorMat = new XG.PhongMaterial( { color: 0x444444, map: map, bumpMap: map, bumpScale: 0.05, shininess: 50 } );
+				var floorGeo = new XG.PlaneGeometry( FLOOR_SIZE, FLOOR_SIZE );
+				var floor = new XG.Mesh( floorGeo, floorMat );
+				floor.position.y = FLOOR_HEIGHT;
+				floor.rotation.x = -Math.PI/2;
+				scene.add( floor );
+
+				floor.receiveShadow = true;
+
+				//
+
+				var pars = { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, scale: SCALE,
+							antialias: true,
+							useMultipleRenderTargets: true,
+							tonemapping: XG.UnchartedOperator, brightness: 2.0 };
+
+				renderer = new XG.DeferredRenderer( pars );
+				container.appendChild( renderer.domElement );
+
+				renderer.domElement.style.position = "absolute";
+				renderer.domElement.style.top = MARGIN + "px";
+				renderer.domElement.style.left = "0px";
+
+				renderer.shadowMapEnabled = true;
+				renderer.shadowMapUseDepthTextures = true;
+				renderer.shadowMapCullFace = XG.CullFaceNone;
+				renderer.shadowMapSlopeDepthBias = true;
+
+				renderer.dofEnabled = true;
+				renderer.dofAutofocus = true;
+				renderer.dofAutofocusPoint.set( 0.5, 0.35 );
+				renderer.dofFocusDistance = 10;
+				renderer.dofFocusMaxBlur = 0.2;
+
+				renderer.renderer.sortObjects = false;
+
+
+				// STATS
+
+				stats = new Stats();
+				container.appendChild( stats.domElement );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				//
+
+				simulation = new XG.PhysicsSimulation( { "useTransferables": useTransferables, "workerUrl": 'js/ammo/ammo.worker.cubes.js' } );
+
+				startUp( 500 );
+
+				//
+
+				gravitySliderElement.addEventListener( 'input', onGravityChange, false );
+				resetButtonElement.addEventListener( 'click', onResetClick, false );
+
+			}
+
+			//
+
+			function onGravityChange( event ) {
+
+				var gravity = gravitySliderElement.value;
+				gravityValueElement.innerHTML = parseFloat( gravity ).toFixed( 1 );
+
+				simulation.setGravity( 0, gravity, 0 );
+
+			}
+
+			function onResetClick() {
+
+				resetPositions( boxes );
+				simulation.resetTransforms();
+
+			}
+
+			//
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / ( window.innerHeight - 2 * MARGIN );
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, ( window.innerHeight - 2 * MARGIN ) );
+
+			}
+
+			function resetPositions( objects ) {
+
+				var nObjects = objects.length;
+				var side = Math.ceil( Math.pow( nObjects, 1/3 ) );
+
+				var gap = 0.75;
+
+				// shuffle objects indices
+
+				var ids = [];
+
+				for ( var i = 0; i < nObjects; i ++ ) {
+
+					ids[ i ] = i;
+
+				}
+
+				// Fisher-Yates shuffle (Durstenfeld in-place variant)
+
+				for ( var i = nObjects - 1; i >= 1; i -- ) {
+
+					var j = XG.Math.randomInt( 0, i );
+
+					var tmp = ids[ i ];
+					ids[ i ] = ids[ j ];
+					ids[ j ] = tmp;
+
+				}
+
+				var i = 0;
+
+				for ( var x = 0; x < side; x ++ ) {
+
+					for ( var y = 0; y < side; y ++ ) {
+
+						for ( var z = 0; z < side; z ++ ) {
+
+							if ( i === nObjects ) break;
+
+							var body = objects[ ids[i] ];
+
+							var position = body.position;
+							var rotation = body.quaternion;
+
+							var sx = ( x - side/2 ) * ( 2.2 + Math.random() * gap );
+							var sy = y * ( 3 + Math.random() * gap );
+							var sz = ( z - side/2 ) * ( 2.2 + Math.random() * gap ) - side - 3;
+
+							position.set( sx, sy, sz );
+							rotation.set( 0, 0, 0, 1 );
+
+							i += 1;
+
+						}
+
+					}
+
+				}
+
+			}
+
+			function startUp( nObjects ) {
+
+				document.getElementById( 'nCubes' ).innerHTML = nObjects;
+
+				if ( useTransferables ) {
+
+					console.log( "Physics worker using transferables" );
+
+				} else {
+
+					console.log( "Physics worker using cloning" );
+
+				}
+
+				// create shapes
+
+				var shapes = [];
+
+				var boxShape1 = {
+
+					"id"	: 0,
+
+					"type" 	: "box",
+					"sx"	: 1.0,
+					"sy"	: 1.0,
+					"sz"	: 1.0
+
+				};
+
+				var boxShape2 = {
+
+					"id"	: 1,
+
+					"type" 	: "box",
+					"sx"	: 0.75,
+					"sy"	: 0.75,
+					"sz"	: 0.75
+
+				};
+
+				var sphereShape1 = {
+
+					"id"	: 2,
+
+					"type" 	: "sphere",
+					"radius": 1.0
+
+				};
+
+				shapes.push( boxShape1 );
+				shapes.push( boxShape2 );
+				shapes.push( sphereShape1 );
+
+				// create objects
+
+				for ( var i = 0; i < nObjects; i ++ ) {
+
+					//var boxMat = boxMaterials[ Math.floor( 3 * i / nObjects ) ];
+					var boxMat = boxMaterials[ Math.floor( 3 * Math.random() ) ];
+
+					//
+
+					var scale = 1.0;
+					var geometry = boxGeo;
+					var material = boxMat;
+					var mass = 1.0;
+					var shapeId = boxShape1.id;
+
+					if ( i < nObjects/2 ) {
+
+						/*
+						scale = 0.75;
+						shapeId = boxShape2.id;
+						mass = 4.0;
+						material = material2a;
+						*/
+
+						shapeId = sphereShape1.id;
+						geometry = sphereGeo;
+						material = material2a;
+						mass = 4.0;
+
+					}
+
+					var physicsProperties = {
+
+						"shapeId"	: shapeId,
+						"mass" 		: mass,
+						"linearSleepThreshold"  : 0.2,
+						"angularSleepThreshold" : 0.25
+
+					};
+
+					//
+
+					var mesh = new XG.Mesh( geometry, material );
+					mesh.scale.multiplyScalar( scale );
+					mesh.position.set( 0, -10000, 0 );
+					mesh.useQuaternion = true;
+					scene.add( mesh );
+
+					mesh.receiveShadow = true;
+					mesh.castShadow = true;
+
+					mesh.properties.physics = physicsProperties;
+
+					boxes[ i ] = mesh;
+
+				}
+
+				resetPositions( boxes );
+
+				//
+
+				simulation.callbackIdle = function () {
+
+					resetPositions( boxes );
+					simulation.resetTransforms();
+
+				}
+
+				var physicsWorld = {
+
+					"objects"	: boxes,
+					"shapes"	: shapes,
+					"floorSize"	  : FLOOR_SIZE,
+					"floorHeight" : FLOOR_HEIGHT,
+					"gravity"	  : [ 0.0, -5.0, 0.0 ]
+
+				};
+
+				simulation.startPhysics( physicsWorld );
+
+			}
+
+			function checkStatus() {
+
+				if ( !loaded )  {
+
+					loadCounter += 1;
+
+					if ( loadCounter > 3 ) {
+
+						loaded = true;
+						loadingElement.style.display = "none";
+
+					}
+
+				}
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+
+				stats.update();
+				showPhysicsFPS();
+
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+
+    </body>
+</html>
