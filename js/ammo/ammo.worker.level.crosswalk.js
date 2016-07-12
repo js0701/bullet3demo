@@ -130,24 +130,24 @@ var DISABLE_SIMULATION = 5;
 
 // enum PHY_ScalarType
 
-var PHY_FLOAT = 0;
-var PHY_DOUBLE = 1;
-var PHY_INTEGER = 2;
-var PHY_SHORT = 3;
-var PHY_FIXEDPOINT88 = 4;
-var PHY_UCHAR = 5;
+var PHY_FLOAT =   "PHY_FLOAT";
+var PHY_DOUBLE =  "PHY_DOUBLE";
+var PHY_INTEGER = "PHY_INTEGER";
+var PHY_SHORT =   "PHY_SHORT";
+var PHY_FIXEDPOINT88 = "PHY_FIXEDPOINT88";
+var PHY_UCHAR = "PHY_UCHAR";
 
-var gravityVector = new Ammo.btVector3( 0, -9.81, 0 );
+var gravityVector = new Ammo.Vector3( 0, -9.81, 0 );
 
-var collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
-var dispatcher = new Ammo.btCollisionDispatcher( collisionConfiguration );
-var overlappingPairCache = new Ammo.btDbvtBroadphase();
-var solver = new Ammo.btSequentialImpulseConstraintSolver();
+var collisionConfiguration = new Ammo.DefaultCollisionConfiguration();
+var dispatcher = new Ammo.CollisionDispatcher( collisionConfiguration );
+var overlappingPairCache = new Ammo.DbvtBroadphase();
+var solver = new Ammo.SequentialImpulseConstraintSolver();
 
-var dynamicsWorld = new Ammo.btDiscreteDynamicsWorld( dispatcher, overlappingPairCache, solver, collisionConfiguration );
+var dynamicsWorld = new Ammo.DiscreteDynamicsWorld( dispatcher, overlappingPairCache, solver, collisionConfiguration );
 dynamicsWorld.setGravity( gravityVector );
 
-var tmpTransform = new Ammo.btTransform();
+var tmpTransform = new Ammo.Transform();
 
 var bodies = [];
 var vehicles = [];
@@ -161,14 +161,14 @@ function initGround( floorSize, floorHeight ) {
 
 	// break floor into 4 tiles to reduce vehicle wheels jitter
 
-	var groundSize = new Ammo.btVector3( floorSizeHalf, floorThickness, floorSizeHalf );
-	var groundShape = new Ammo.btBoxShape( groundSize );
+	var groundSize = new Ammo.Vector3( floorSizeHalf, floorThickness, floorSizeHalf );
+	var groundShape = new Ammo.BoxShape( groundSize );
 
-	var groundTransform = new Ammo.btTransform();
+	var groundTransform = new Ammo.Transform();
 	groundTransform.setIdentity();
 
 	var mass = 0;
-	var localInertia = new Ammo.btVector3( 0, 0, 0 );
+	var localInertia = new Ammo.Vector3( 0, 0, 0 );
 
 	var offsets = [ [ -floorSizeHalf, -floorSizeHalf ],
 					[ -floorSizeHalf, floorSizeHalf ],
@@ -179,12 +179,12 @@ function initGround( floorSize, floorHeight ) {
 
 		var offset = offsets[ i ];
 
-		var position = new Ammo.btVector3( offset[ 0 ], floorHeight - floorThickness, offset[ 1 ] );
+		var position = new Ammo.Vector3( offset[ 0 ], floorHeight - floorThickness, offset[ 1 ] );
 		groundTransform.setOrigin( position );
 
-		var myMotionState = new Ammo.btDefaultMotionState( groundTransform );
-		var rbInfo = new Ammo.btRigidBodyConstructionInfo( mass, myMotionState, groundShape, localInertia );
-		var groundBody = new Ammo.btRigidBody( rbInfo );
+		var myMotionState = new Ammo.DefaultMotionState( groundTransform );
+		var rbInfo = new Ammo.RigidBodyConstructionInfo( mass, myMotionState, groundShape, localInertia );
+		var groundBody = new Ammo.RigidBody( rbInfo );
 
 		dynamicsWorld.addRigidBody( groundBody );
 
@@ -244,7 +244,7 @@ function resetTransforms( nObjects, transforms ) {
 
 function createVehicleTuning( data ) {
 
-	var tuning = new Ammo.btVehicleTuning();
+	var tuning = new Ammo.VehicleTuning();
 
 	var suspensionStiffness = ( data.suspensionStiffness !== undefined ) ? data.suspensionStiffness : 5.88;
 	var suspensionCompression = ( data.suspensionCompression !== undefined ) ? data.suspensionCompression: 0.83;
@@ -270,8 +270,8 @@ function createVehicle( data ) {
 	var rollInfluence = ( data.rollInfluence !== undefined ) ? data.rollInfluence : 0.1;
 
 	var chassis = bodiesMap[ data.chassisId ];
-	var raycaster = new Ammo.btDefaultVehicleRaycaster( dynamicsWorld );
-	var vehicle = new Ammo.btRaycastVehicle( vehicleTuning, chassis, raycaster );
+	var raycaster = new Ammo.DefaultVehicleRaycaster( dynamicsWorld );
+	var vehicle = new Ammo.RaycastVehicle( vehicleTuning, chassis, raycaster );
 
 	chassis.setActivationState( DISABLE_DEACTIVATION );
 	vehicle.setCoordinateSystem( 0, 1, 2 ); // right, up, forward
@@ -290,9 +290,9 @@ function createVehicle( data ) {
 
 		var tuning = ( wheel.tuning !== undefined ) ? createVehicleTuning( wheel.tuning ) : vehicleTuning;
 
-		var connectionPointCS0 = new Ammo.btVector3( connection[ 0 ], connection[ 1 ], connection[ 2 ] );
-		var wheelDirectionCS0 = new Ammo.btVector3( direction[ 0 ], direction[ 1 ], direction[ 2 ] );
-		var wheelAxleCS = new Ammo.btVector3( axle[ 0 ], axle[ 1 ], axle[ 2 ] );
+		var connectionPointCS0 = new Ammo.Vector3( connection[ 0 ], connection[ 1 ], connection[ 2 ] );
+		var wheelDirectionCS0 = new Ammo.Vector3( direction[ 0 ], direction[ 1 ], direction[ 2 ] );
+		var wheelAxleCS = new Ammo.Vector3( axle[ 0 ], axle[ 1 ], axle[ 2 ] );
 
 		vehicle.addWheel( connectionPointCS0, wheelDirectionCS0, wheelAxleCS,
 						  suspensionRestLength, wheelRadius, tuning, isFrontWheel );
@@ -398,8 +398,8 @@ function createShape( data ) {
 		var sy = data.sy;
 		var sz = data.sz;
 
-		sizeVector = new Ammo.btVector3( sx, sy, sz );
-		shape = new Ammo.btBoxShape( sizeVector );
+		sizeVector = new Ammo.Vector3( sx, sy, sz );
+		shape = new Ammo.BoxShape( sizeVector );
 
 	} else if ( type === "cylinder" ) {
 
@@ -407,28 +407,29 @@ function createShape( data ) {
 		var sy = data.sy;
 		var sz = data.sz;
 
-		sizeVector = new Ammo.btVector3( sx, sy, sz );
-		shape = new Ammo.btCylinderShape( sizeVector );
+		sizeVector = new Ammo.Vector3( sx, sy, sz );
+		shape = new Ammo.CylinderShape( sizeVector );
 
 	} else if ( type === "sphere" ) {
 
 		var radius = data.radius;
-		shape = new Ammo.btSphereShape( radius );
+		shape = new Ammo.SphereShape( radius );
 
 	} else if ( type === "capsule" ) {
 
 		var radius = data.radius;
 		var height = data.height;
-		shape = new Ammo.btCapsuleShape( radius, height );
+		shape = new Ammo.CapsuleShape( radius, height );
 
 	} else if ( type === "heightfield" ) {
 
 		var floatByteSize = 4;
-		var heightBuffer = Ammo.allocate( floatByteSize * data.widthPoints * data.lengthPoints, "float", Ammo.ALLOC_NORMAL );
+		var heightBuffer = new Float32Array(data.widthPoints * data.lengthPoints);//Ammo.allocate( floatByteSize * data.widthPoints * data.lengthPoints, "float", Ammo.ALLOC_NORMAL );
 
 		for ( var i = 0, il = data.heights.length; i < il; i ++ ) {
 
-			Ammo.setValue( heightBuffer + i * floatByteSize, data.heights[ i ], 'float' );
+			//Ammo.setValue( heightBuffer + i * floatByteSize, data.heights[ i ], 'float' );
+			heightBuffer[i] = data.heights[ i ];
 
 		}
 
@@ -439,7 +440,7 @@ function createShape( data ) {
 		var heightDataType = PHY_FLOAT;
 		var flipQuadEdges = false;
 
-		shape = new Ammo.btHeightfieldTerrainShape(
+		shape = new Ammo.HeightfieldTerrainShape(
 					data.widthPoints,
 					data.lengthPoints,
 					heightBuffer,
@@ -455,7 +456,7 @@ function createShape( data ) {
 		var sz = data.length / ( data.lengthPoints - 1 );
 		var sy = 1.0;
 
-		sizeVector = new Ammo.btVector3( sx, sy, sz );
+		sizeVector = new Ammo.Vector3( sx, sy, sz );
 		shape.setLocalScaling( sizeVector );
 
 	} else if ( type === "triangleMesh" ) {
@@ -475,28 +476,34 @@ function createShape( data ) {
 			var numTriangles = indices.length / 3;
 			var numVertices = vertices.length / 3;
 
-			var triangleMesh = new Ammo.btTriangleIndexVertexArray();
+			var triangleMesh = new Ammo.TriangleIndexVertexArray();
 
 			var indexType = PHY_INTEGER;
-			var mesh = new Ammo.btIndexedMesh();
+			var mesh = new Ammo.IndexedMesh();
 
 			var floatByteSize = 4;
-			var vertexBuffer = Ammo.allocate( floatByteSize * vertices.length, "float", Ammo.ALLOC_NORMAL );
+			var vertexBuffer = new Float32Array(vertices.length); //Ammo.allocate( floatByteSize * vertices.length, "float", Ammo.ALLOC_NORMAL );
 
 			for ( var i = 0, il = vertices.length; i < il; i ++ ) {
 
-				Ammo.setValue( vertexBuffer + i * floatByteSize, scale * vertices[ i ], 'float' );
+				//Ammo.setValue( vertexBuffer + i * floatByteSize, scale * vertices[ i ], 'float' );
+				vertexBuffer[i] = scale * vertices[ i ];
 
 			}
 
 			var intByteSize = use32bitIndices ? 4 : 2;
 			var intType = use32bitIndices ? "i32" : "i16";
 
-			var indexBuffer = Ammo.allocate( intByteSize * indices.length, intType, Ammo.ALLOC_NORMAL );
+			var indexBuffer;  //= Ammo.allocate( intByteSize * indices.length, intType, Ammo.ALLOC_NORMAL );
+			if(use32bitIndices)
+				indexBuffer = new Int32Array(indices.length);
+			else
+				indexBuffer = new Int16Array(indices.length)
 
 			for ( var i = 0, il = indices.length; i < il; i ++ ) {
 
-				Ammo.setValue( indexBuffer + i * intByteSize, indices[ i ], intType );
+				//Ammo.setValue( indexBuffer + i * intByteSize, indices[ i ], intType );
+				indexBuffer[i] = indices[ i ];
 
 			}
 
@@ -515,13 +522,13 @@ function createShape( data ) {
 
 		} else {
 
-			var triangleMesh = new Ammo.btTriangleMesh( use32bitIndices, use4componentVertices );
+			var triangleMesh = new Ammo.TriangleMesh( use32bitIndices, use4componentVertices );
 
 			var removeDuplicateVertices = true;
 
-			var vertexA = new Ammo.btVector3( 0, 0, 0 );
-			var vertexB = new Ammo.btVector3( 0, 0, 0 );
-			var vertexC = new Ammo.btVector3( 0, 0, 0 );
+			var vertexA = new Ammo.Vector3( 0, 0, 0 );
+			var vertexB = new Ammo.Vector3( 0, 0, 0 );
+			var vertexC = new Ammo.Vector3( 0, 0, 0 );
 
 			var vertices = data.vertices;
 
@@ -564,11 +571,11 @@ function createShape( data ) {
 		var useQuantizedAabbCompression = true;
 		var buildBvh = true;
 
-		shape = new Ammo.btBvhTriangleMeshShape( triangleMesh, useQuantizedAabbCompression, buildBvh );
+		shape = new Ammo.BvhTriangleMeshShape( triangleMesh, useQuantizedAabbCompression, buildBvh );
 
 	} else if ( type === "compound" ) {
 
-		shape = new Ammo.btCompoundShape();
+		shape = new Ammo.CompoundShape();
 
 		for ( var i = 0, il = data.children.length; i < il; i ++ ) {
 
@@ -576,7 +583,7 @@ function createShape( data ) {
 			var position = ( child.position !== undefined ) ? child.position : [ 0.0, 0.0, 0.0 ];
 			var rotation = ( child.rotation !== undefined ) ? child.rotation : [ 0.0, 0.0, 0.0, 1.0 ];
 
-			var localTransform = new Ammo.btTransform();
+			var localTransform = new Ammo.Transform();
 			localTransform.setIdentity();
 
 			var origin = localTransform.getOrigin();
@@ -616,7 +623,7 @@ function createRigidBodies( nObjects, transforms, objectsData ) {
 	var offset = 0;
 	var itemSize = 7;
 
-	var startTransform = new Ammo.btTransform();
+	var startTransform = new Ammo.Transform();
 	startTransform.setIdentity();
 
 	for ( var i = 0; i < nObjects; i ++ ) {
@@ -650,7 +657,7 @@ function createRigidBodies( nObjects, transforms, objectsData ) {
 
 		var shape = shapesMap[ shapeId ];
 
-		var localInertia = new Ammo.btVector3( 0, 0, 0 );
+		var localInertia = new Ammo.Vector3( 0, 0, 0 );
 
 		if ( isDynamic ) {
 
@@ -667,9 +674,9 @@ function createRigidBodies( nObjects, transforms, objectsData ) {
 
 		}
 
-		var motionState = new Ammo.btDefaultMotionState( startTransform );
-		var rbInfo = new Ammo.btRigidBodyConstructionInfo( mass, motionState, shape, localInertia );
-		var body = new Ammo.btRigidBody( rbInfo );
+		var motionState = new Ammo.DefaultMotionState( startTransform );
+		var rbInfo = new Ammo.RigidBodyConstructionInfo( mass, motionState, shape, localInertia );
+		var body = new Ammo.RigidBody( rbInfo );
 
 		//
 
@@ -748,13 +755,13 @@ function createHingeConstraint( data ) {
 	var axisA = data.axisInA;
 	var axisB = data.axisInB;
 
-	var pivotInA = new Ammo.btVector3( pivotA[ 0 ], pivotA[ 1 ], pivotA[ 2 ] );
-	var pivotInB = new Ammo.btVector3( pivotB[ 0 ], pivotB[ 1 ], pivotB[ 2 ] );
+	var pivotInA = new Ammo.Vector3( pivotA[ 0 ], pivotA[ 1 ], pivotA[ 2 ] );
+	var pivotInB = new Ammo.Vector3( pivotB[ 0 ], pivotB[ 1 ], pivotB[ 2 ] );
 
-	var axisInA = new Ammo.btVector3( axisA[ 0 ], axisA[ 1 ], axisA[ 2 ] );
-	var axisInB = new Ammo.btVector3( axisB[ 0 ], axisB[ 1 ], axisB[ 2 ] );
+	var axisInA = new Ammo.Vector3( axisA[ 0 ], axisA[ 1 ], axisA[ 2 ] );
+	var axisInB = new Ammo.Vector3( axisB[ 0 ], axisB[ 1 ], axisB[ 2 ] );
 
-	var constraint = new Ammo.btHingeConstraint( bodyA, bodyB, pivotInA, pivotInB, axisInA, axisInB );
+	var constraint = new Ammo.HingeConstraint( bodyA, bodyB, pivotInA, pivotInB, axisInA, axisInB );
 
 	if ( data.limit !== undefined ) {
 
@@ -785,8 +792,8 @@ function createConeTwistConstraint( data ) {
 	// 	twist is along the x-axis,
 	// 	and swing 1 and 2 are along the z and y axes respectively.
 
-	var transformA = new Ammo.btTransform();
-	var transformB = new Ammo.btTransform();
+	var transformA = new Ammo.Transform();
+	var transformB = new Ammo.Transform();
 
 	transformA.setIdentity();
 	transformB.setIdentity();
@@ -822,7 +829,7 @@ function createConeTwistConstraint( data ) {
 
 	if ( positionA ) {
 
-		transformA.setOrigin( new Ammo.btVector3( positionA[ 0 ], positionA[ 1 ], positionA[ 2 ] ) );
+		transformA.setOrigin( new Ammo.Vector3( positionA[ 0 ], positionA[ 1 ], positionA[ 2 ] ) );
 
 	}
 
@@ -848,7 +855,7 @@ function createConeTwistConstraint( data ) {
 
 	if ( positionB ) {
 
-		transformB.setOrigin( new Ammo.btVector3( positionB[ 0 ], positionB[ 1 ], positionB[ 2 ] ) );
+		transformB.setOrigin( new Ammo.Vector3( positionB[ 0 ], positionB[ 1 ], positionB[ 2 ] ) );
 
 	}
 
@@ -857,7 +864,7 @@ function createConeTwistConstraint( data ) {
 	var bodyA = bodiesMap[ data.bodyA ];
 	var bodyB = bodiesMap[ data.bodyB ];
 
-	var constraint = new Ammo.btConeTwistConstraint( bodyA, bodyB, transformA, transformB );
+	var constraint = new Ammo.ConeTwistConstraint( bodyA, bodyB, transformA, transformB );
 
 	if ( data.limit !== undefined ) {
 

@@ -1,37 +1,5 @@
 var Ammo = bullet;
 
-var HEAP;
-var HEAP8, HEAPU8, HEAP16, HEAPU16, HEAP32, HEAPU32, HEAPF32, HEAPF64;
-var STATIC_BASE = 0, STATICTOP = 0, staticSealed = false; // static area
-var STACK_BASE = 0, STACKTOP = 0, STACK_MAX = 0; // stack area
-var DYNAMIC_BASE = 0, DYNAMICTOP = 0; // dynamic area handled by sbrk
-function enlargeMemory() {
-  abort('Cannot enlarge memory arrays in asm.js. Either (1) compile with -s TOTAL_MEMORY=X with X higher than the current value, or (2) set Module.TOTAL_MEMORY before the program runs.');
-}
-var TOTAL_STACK = 5242880;
-var TOTAL_MEMORY = 256 * 1024 * 1024;
-var FAST_MEMORY = 2097152;
-
-var buffer = new ArrayBuffer(TOTAL_MEMORY);
-HEAP8 = new Int8Array(buffer);
-HEAP16 = new Int16Array(buffer);
-HEAP32 = new Int32Array(buffer);
-HEAPU8 = new Uint8Array(buffer);
-HEAPU16 = new Uint16Array(buffer);
-HEAPU32 = new Uint32Array(buffer);
-HEAPF32 = new Float32Array(buffer);
-HEAPF64 = new Float64Array(buffer);
-
-Ammo.HEAP         = HEAP;
-Ammo.HEAP8        = HEAP8;
-Ammo.HEAP16       = HEAP16;
-Ammo.HEAP32       = HEAP32;
-Ammo.HEAPU8       = HEAPU8;
-Ammo.HEAPU16      = HEAPU16;
-Ammo.HEAPU32      = HEAPU32;
-Ammo.HEAPF32      = HEAPF32;
-Ammo.HEAPF64      = HEAPF64;
-
 var ALLOC_NORMAL = 0; // Tries to use _malloc()
 var ALLOC_STACK = 1; // Lives for the duration of the current function call
 var ALLOC_STATIC = 2; // Cannot be freed
