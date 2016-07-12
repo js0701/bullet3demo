@@ -67,6 +67,7 @@
 	</head>
 
 	<body>
+		<div id="loading">Loading ...</div>
 
 		<div id="info">
 			<a href="http://alteredqualia.com/" target="_blank">xg</a> -
@@ -89,6 +90,7 @@
 
 		<div id="container"></div>
 
+		<div id="progressbar"><div id="progressloaded"></div></div>
 
 		<script src="js/xg.min.rgba.js"></script>
 
@@ -136,13 +138,13 @@
 
 			//
 
-			//var progressBarElement = document.getElementById( 'progressbar' );
-			//var progressLoadedElement = document.getElementById( 'progressloaded' );
+			var progressBarElement = document.getElementById( 'progressbar' );
+			var progressLoadedElement = document.getElementById( 'progressloaded' );
 
 			//
 
 			var loadingElement = document.getElementById( 'loading' );
-			var loaded = true;
+			var loaded = false;
 			var loadCounter = 0;
 
 			var fpsElement = document.getElementById( 'nFPS' );
@@ -332,7 +334,7 @@
 
 				// physics
 
-				simulation = new XG.PhysicsSimulation( { "useTransferables": useTransferables, "workerUrl": 'js/ammo/ammo.worker.level.crosswalk.js' } );
+				simulation = new XG.PhysicsSimulation( { "useTransferables": useTransferables, "workerUrl": 'js/ammo/ammo.worker.level.js' } );
 
 				// clock
 
@@ -372,7 +374,7 @@
 
 					}
 
-			}
+				}
 
 			}
 
@@ -1587,7 +1589,7 @@
 					lightProbesManager.refreshProbes();
 					ambientLight.visible = true;
 
-					//progressBarElement.style.display = "none";
+					progressBarElement.style.display = "none";
 
 				};
 
@@ -1633,7 +1635,7 @@
 
 					allTotal = Math.min( allTotal, 21281112 );
 
-					//progressLoadedElement.style.width = Math.round( ( allLoaded / allTotal ) * 700 ) + "px";
+					progressLoadedElement.style.width = Math.round( ( allLoaded / allTotal ) * 700 ) + "px";
 
 					//console.log( "loaded", allLoaded, "total", allTotal );
 
