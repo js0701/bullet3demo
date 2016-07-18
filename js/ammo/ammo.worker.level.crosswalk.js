@@ -467,6 +467,8 @@ function createShape( data ) {
 		var use4componentVertices = false;
 
 		var scale = data.scale;
+		var triangleMesh;
+		var triangleMeshType;
 
 		if ( indexedTriangles ) {
 
@@ -476,7 +478,8 @@ function createShape( data ) {
 			var numTriangles = indices.length / 3;
 			var numVertices = vertices.length / 3;
 
-			var triangleMesh = new Ammo.TriangleIndexVertexArray();
+			triangleMesh = new Ammo.TriangleIndexVertexArray();
+			triangleMeshType = "TriangleIndexVertexArray";
 
 			var indexType = PHY_INTEGER;
 			var mesh = new Ammo.IndexedMesh();
@@ -518,11 +521,14 @@ function createShape( data ) {
 			mesh.set_m_vertexBase( vertexBuffer );
 			mesh.set_m_vertexStride( vertexStride );
 
+			console.log("buildTree numTriangles " + numTriangles + " numVertices " + numVertices + " intType " + intType);
+
 			triangleMesh.addIndexedMesh( mesh, indexType );
 
 		} else {
 
-			var triangleMesh = new Ammo.TriangleMesh( use32bitIndices, use4componentVertices );
+			triangleMesh = new Ammo.TriangleMesh( use32bitIndices, use4componentVertices );
+			triangleMeshType = "TriangleMesh";
 
 			var removeDuplicateVertices = true;
 
@@ -571,7 +577,9 @@ function createShape( data ) {
 		var useQuantizedAabbCompression = true;
 		var buildBvh = true;
 
+        console.log("Begin buildTree!" + triangleMeshType);
 		shape = new Ammo.BvhTriangleMeshShape( triangleMesh, useQuantizedAabbCompression, buildBvh );
+	    console.log("buildTree successful!")
 
 	} else if ( type === "compound" ) {
 
