@@ -470,7 +470,7 @@ function createShape( data ) {
 		var triangleMesh;
 		var triangleMeshType;
 
-		if ( indexedTriangles ) {
+		/*if ( indexedTriangles ) {
 
 			var vertices = data.vertices;
 			var indices = data.indices;
@@ -490,7 +490,7 @@ function createShape( data ) {
 			for ( var i = 0, il = vertices.length; i < il; i ++ ) {
 
 				//Ammo.setValue( vertexBuffer + i * floatByteSize, scale * vertices[ i ], 'float' );
-				vertexBuffer[i] = scale * vertices[ i ];
+				vertexBuffer[i] = (scale * vertices[ i ]) || 0;
 
 			}
 
@@ -506,7 +506,7 @@ function createShape( data ) {
 			for ( var i = 0, il = indices.length; i < il; i ++ ) {
 
 				//Ammo.setValue( indexBuffer + i * intByteSize, indices[ i ], intType );
-				indexBuffer[i] = indices[ i ];
+				indexBuffer[i] = (indices[ i ]) || 0;
 
 			}
 
@@ -525,7 +525,7 @@ function createShape( data ) {
 
 			triangleMesh.addIndexedMesh( mesh, indexType );
 
-		} else {
+		} else */ {
 
 			triangleMesh = new Ammo.TriangleMesh( use32bitIndices, use4componentVertices );
 			triangleMeshType = "TriangleMesh";
@@ -540,17 +540,17 @@ function createShape( data ) {
 
 			for ( var i = 0, il = vertices.length; i < il; i += 9 ) {
 
-				var xA = vertices[ i ];
-				var yA = vertices[ i + 1 ];
-				var zA = vertices[ i + 2 ];
+				var xA = vertices[ i ] || 0;
+				var yA = vertices[ i + 1 ] || 0;
+				var zA = vertices[ i + 2 ] || 0;
 
-				var xB = vertices[ i + 3 ];
-				var yB = vertices[ i + 4 ];
-				var zB = vertices[ i + 5 ];
+				var xB = vertices[ i + 3 ] || 0;
+				var yB = vertices[ i + 4 ] || 0;
+				var zB = vertices[ i + 5 ] || 0;
 
-				var xC = vertices[ i + 6 ];
-				var yC = vertices[ i + 7 ];
-				var zC = vertices[ i + 8 ];
+				var xC = vertices[ i + 6 ] || 0;
+				var yC = vertices[ i + 7 ] || 0;
+				var zC = vertices[ i + 8 ] || 0;
 
 				xA *= scale;
 				yA *= scale;
@@ -565,6 +565,10 @@ function createShape( data ) {
 				zC *= scale;
 
 				vertexA.setValue( xA, yA, zA );
+
+                if(Number.isNaN(xB))
+                console.log("xB:" + xB + " yB:"+yB + " zB:"+zB);
+
 				vertexB.setValue( xB, yB, zB );
 				vertexC.setValue( xC, yC, zC );
 
