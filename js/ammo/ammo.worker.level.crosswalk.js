@@ -1,6 +1,72 @@
 // asm.js config
 
-var Module = { TOTAL_MEMORY: 256 * 1024 * 1024 };
+TOTAL_MEMORY = 256 * 1024 * 1024;
+
+var buffer = new ArrayBuffer(TOTAL_MEMORY);
+//HEAP8 = new Int8Array(buffer);
+//HEAP16 = new Int16Array(buffer);
+//HEAP32 = new Int32Array(buffer);
+//HEAPU8 = new Uint8Array(buffer);
+//HEAPU16 = new Uint16Array(buffer);
+//HEAPU32 = new Uint32Array(buffer);
+//HEAPF32 = new Float32Array(buffer);
+//HEAPF64 = new Float64Array(buffer);
+
+var bufferTop = 0;
+
+function allocate(type, size)
+{
+   var ret;
+
+   if(type == 'float32')
+   {
+   	  ret = new Float32Array(buffer, bufferTop, (size<<2));
+   	  bufferTop += (size<<2);
+   }
+   else if(type == 'float64')
+   {
+   	  ret = new Float64Array(buffer, bufferTop, (size<<3));
+   	  bufferTop += (size<<3);
+
+   }
+   else if(type == 'int32')
+   {
+   	  ret = new Int32Array(buffer, bufferTop, (size<<2));
+   	  bufferTop += (size<<2);
+   }
+   else if(type == 'int16')
+   {
+   	  ret = new Int16Array(buffer, bufferTop, (size<<1));
+   	  bufferTop += (size<<1);
+   }
+   else if(type == 'int8')
+   {
+   	  ret = new Int8Array(buffer, bufferTop, size);
+   	  bufferTop += size;
+   }
+
+   else if(type == 'uint32')
+   {
+   	  ret = new Uint32Array(buffer, bufferTop, (size<<2));
+   	  bufferTop += (size<<2);
+   }
+   else if(type == 'uint16')
+   {
+   	  ret = new Uint16Array(buffer, bufferTop, (size<<1));
+   	  bufferTop += (size<<1);
+   }
+   else if(type == 'uint8')
+   {
+   	  ret = new Uint16Array(buffer, bufferTop, size);
+   	  bufferTop += (size);
+   }
+
+   bufferTop = (((bufferTop+15)>>4)<<4);
+   if(bufferTop >= TOTAL_MEMORY)
+   	  alert("Memory not enough for allocation!")
+
+   return ret;
+}
 
 // globals
 
@@ -424,7 +490,7 @@ function createShape( data ) {
 	} else if ( type === "heightfield" ) {
 
 		var floatByteSize = 4;
-		var heightBuffer = new Float32Array(data.widthPoints * data.lengthPoints);//Ammo.allocate( floatByteSize * data.widthPoints * data.lengthPoints, "float", Ammo.ALLOC_NORMAL );
+		var heightBuffer = allocate('float32', data.widthPoints * data.lengthPoints); //new Float32Array(data.widthPoints * data.lengthPoints);//Ammo.allocate( floatByteSize * data.widthPoints * data.lengthPoints, "float", Ammo.ALLOC_NORMAL );
 
 		for ( var i = 0, il = data.heights.length; i < il; i ++ ) {
 
@@ -470,7 +536,7 @@ function createShape( data ) {
 		var triangleMesh;
 		var triangleMeshType;
 
-		/*if ( indexedTriangles ) {
+		if ( indexedTriangles ) {
 
 			var vertices = data.vertices;
 			var indices = data.indices;
@@ -485,7 +551,7 @@ function createShape( data ) {
 			var mesh = new Ammo.IndexedMesh();
 
 			var floatByteSize = 4;
-			var vertexBuffer = new Float32Array(vertices.length); //Ammo.allocate( floatByteSize * vertices.length, "float", Ammo.ALLOC_NORMAL );
+			var vertexBuffer = allocate('float32', vertices.length);//new Float32Array(2*vertices.length); //Ammo.allocate( floatByteSize * vertices.length, "float", Ammo.ALLOC_NORMAL );
 
 			for ( var i = 0, il = vertices.length; i < il; i ++ ) {
 
@@ -499,14 +565,15 @@ function createShape( data ) {
 
 			var indexBuffer;  //= Ammo.allocate( intByteSize * indices.length, intType, Ammo.ALLOC_NORMAL );
 			if(use32bitIndices)
-				indexBuffer = new Int32Array(indices.length);
+				indexBuffer = allocate('int32', indices.length);//new Int32Array(2*indices.length);
 			else
-				indexBuffer = new Int16Array(indices.length)
+				indexBuffer = allocate('int16', indices.length);//new Int16Array(2*indices.length)
 
 			for ( var i = 0, il = indices.length; i < il; i ++ ) {
 
 				//Ammo.setValue( indexBuffer + i * intByteSize, indices[ i ], intType );
 				indexBuffer[i] = (indices[ i ]) || 0;
+				if(indexBuffer[i] < 0 )  indexBuffer[i] = 0;
 
 			}
 
@@ -525,7 +592,7 @@ function createShape( data ) {
 
 			triangleMesh.addIndexedMesh( mesh, indexType );
 
-		} else */ {
+		} else {
 
 			triangleMesh = new Ammo.TriangleMesh( use32bitIndices, use4componentVertices );
 			triangleMeshType = "TriangleMesh";
