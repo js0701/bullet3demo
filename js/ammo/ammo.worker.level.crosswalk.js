@@ -341,6 +341,7 @@ function createVehicle( data ) {
 
 	chassis.setActivationState( DISABLE_DEACTIVATION );
 	vehicle.setCoordinateSystem( 0, 1, 2 ); // right, up, forward
+    data.wheels.length = data.wheels.length || 0;
 
 	for ( var i = 0, il = data.wheels.length; i < il; i ++ ) {
 
